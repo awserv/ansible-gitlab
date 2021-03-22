@@ -1,0 +1,62 @@
+---
+ - hosts: [localhost]
+   become: yes
+   become_user: root
+   gather_facts: false # dont collect facts about tasks
+   ignore_errors: true
+ # vars_files:
+ #   - /home/ubuntu/ansible/roles/vars/vars.yml
+
+#curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo apt-key add -
+   tasks:
+    - name: installed key repository
+      apt_key: url=https://download.docker.com/linux/ubuntu/gpg
+      state: present
+  
+    - name: install python modules
+      apt:
+       state: latest
+       name: python-pip
+    
+    - name: install-docker-py
+      pip:
+       name: docker-py
+       state: present
+      # state: "{{docker_py_docker_py_state|default(omit)}}"
+
+    - name: docker registry
+      apt_repository:
+       repo: 'deb https://download.docker.com/linux/ubuntu bionic stable'
+       state: present
+
+    - name: installed key repository
+      apt_key: url=https://download.docker.com/linux/ubuntu/gpg
+      state: present
+
+    - name: install docker
+      apt:
+       name: docker-ce
+       update_cache: yes
+
+    - name: Launch nginx container
+      docker_container:
+       name: nginx-proxy
+       image: nginx:latest
+       state: started
+       ports:
+          - "8080:8080"
+       
+    - name: Start docker
+      service:
+       name: docker
+       state: started
+    
+    - name: Checking running Docker Container
+      become: yes
+      shell: docker ps -a
+
+    - name: allowed nginx firewall
+      ufw:
+          proto: tcp
+          port: 8080
+          rule: allow
